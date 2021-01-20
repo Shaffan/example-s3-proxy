@@ -1,0 +1,54 @@
+{
+  "name": "example-s3-proxy",
+  "version": "0.1.0",
+  "description": "An simple, serverless S3 proxy implementation",
+  "main": "index.js",
+  "scripts": {
+    "test": " nyc --reporter=text-summary npm run unit-test",
+    "unit-test": "npx mocha '!(node_modules)/**/*.test.js' --recursive",
+    "integration-test": "jest --maxWorkers=5 integration",
+    "coverage": "nyc --reporter=text npm run unit-test"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "pre-push": "npm test"
+    }
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint"
+    ]
+  },
+  "keywords": [
+    "content", "images", "static files", "content delivery"
+  ],
+  "author": "Stefan Horne",
+  "license": "MIT",
+  "devDependencies": {
+    "aws-sdk": "^2.796.0",
+    "aws-sdk-mock": "^5.1.0",
+    "aws-testing-library": "^1.1.1",
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "eslint": "^6.0.1",
+    "eslint-config-prettier": "^6.0.0",
+    "eslint-plugin-import": "^2.18.2",
+    "eslint-plugin-prettier": "^3.1.0",
+    "husky": "^3.0.1",
+    "jest": "^26.6.3",
+    "lint-staged": "^9.2.0",
+    "lodash": "^4.17.20",
+    "mocha": "^8.2.1",
+    "nyc": "^15.1.0",
+    "prettier": "^2.2.0",
+    "serverless": "^2.12.0",
+    "serverless-bundle": "^4.0.1",
+    "sinon": "^9.2.1",
+    "sinon-chai": "^3.5.0"
+  },
+  "dependencies": {
+    "js-yaml": "^3.14.0",
+    "sharp": "^0.26.3"
+  }
+}

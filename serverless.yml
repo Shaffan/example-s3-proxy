@@ -1,0 +1,160 @@
+service: srv-s3-proxy
+
+app: content
+org: ${opt:org, 'maniacalmenagerie'}
+
+frameworkVersion: '2'
+
+plugins:
+  - serverless-bundle
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: eu-west-2
+  stage: ${opt:stage, 'qa'}
+  apiGateway:
+    shouldStartNameWithService: true
+    binaryMediaTypes:
+      - '*/*'
+    metrics: true
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - s3:ListBucket
+        - s3:GetObject
+      Resource:
+        - Fn::GetAtt: [S3BucketImages, Arn]
+        - Fn::GetAtt: [S3BucketStatic, Arn]
+
+custom:
+  bundle:
+    sourcemaps: false
+    stats: true
+    linting: false
+    packagerOptions:
+      scripts:
+        - npm install --arch=x64 --platform=linux sharp
+
+functions:
+  GetImage:
+    handler: src/httpApi/v1/index.getFile
+    memorySize: 1024
+    timeout: 15
+    environment:
+      BUCKET:
+        Ref: S3BucketImages
+    events:
+      - http: 
+          path: /content/img/{proxy+}
+          method: get
+      # - alb: 
+      #     listenerArn: ${param:ALB-ARN}
+      #     priority: 1
+      #     conditions:
+      #       host: 
+      #         - <HOSTNAME GOES HERE>
+      #       path: /content/img/*
+      #       method:
+      #         - GET
+  GetStaticResource:
+    handler: src/httpApi/v1/index.getFile
+    environment:
+      BUCKET:
+        Ref: S3BucketStatic
+    events:
+      - http:
+          path: /_common/{proxy+}
+          method: get
+
+resources:
+  Resources:
+    S3BucketImages:
+      Type: 'AWS::S3::Bucket'
+      Properties:
+        PublicAccessBlockConfiguration:
+          RestrictPublicBuckets: true
+    BucketPolicyImages:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket:
+          Ref: S3BucketImages
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                AWS:
+                  Fn::GetAtt: [IamRoleLambdaExecution, Arn]
+              Action:
+                - s3:GetObject
+              Resource:
+                - Fn::Join:
+                  - ''
+                  - - Fn::GetAtt: [S3BucketImages, Arn]
+                    - /*
+            - Effect: Allow
+              Principal:
+                AWS:
+                  Fn::GetAtt: [IamRoleLambdaExecution, Arn]
+              Action:
+                - s3:ListBucket
+              Resource:
+                - Fn::GetAtt: [S3BucketImages, Arn]
+    S3BucketStatic:
+      Type: 'AWS::S3::Bucket'
+      Properties:
+        PublicAccessBlockConfiguration:
+          RestrictPublicBuckets: true
+    BucketPolicyStatic:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket:
+          Ref: S3BucketStatic
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                AWS:
+                  Fn::GetAtt: [IamRoleLambdaExecution, Arn]
+              Action:
+                - s3:GetObject
+              Resource:
+                - Fn::Join:
+                  - ''
+                  - - Fn::GetAtt: [S3BucketStatic, Arn]
+                    - /*
+            - Effect: Allow
+              Principal:
+                AWS:
+                  Fn::GetAtt: [IamRoleLambdaExecution, Arn]
+              Action:
+                - s3:ListBucket
+              Resource:
+                - Fn::GetAtt: [S3BucketStatic, Arn]
+
+  Outputs:
+    FunctionNameGetImage:
+      Value:
+        Ref: GetImageLambdaFunction
+      Export:
+        Name: ${self:provider.stage}-GetImageLambdaFunction
+    S3BucketNameImages:
+      Value:
+        Ref: S3BucketImages
+      Export:
+        Name: ${self:provider.stage}-VedImageBucket
+    S3BucketArnImages:
+      Value:
+        Fn::GetAtt: S3BucketImages.Arn
+      Export:
+        Name: ${self:provider.stage}-VedImageBucketArn
+    S3BucketNameStatic:
+      Value:
+        Ref: S3BucketStatic
+      Export:
+        Name: ${self:provider.stage}-VedStaticBucket
+    S3BucketArnStatic:
+      Value:
+        Fn::GetAtt: S3BucketStatic.Arn
+      Export:
+        Name: ${self:provider.stage}-VedStaticBucketArn
